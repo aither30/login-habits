@@ -9,7 +9,11 @@
 * 🟢 You can import this file directly.
 */
 
+export const GoalType = {
+  COUNT: 'COUNT',
+  SAVINGS: 'SAVINGS',
+  DISTANCE: 'DISTANCE',
+  DURATION: 'DURATION'
+} as const
 
-
-// This file is empty because there are no enums in the schema.
-export {}
+export type GoalType = (typeof GoalType)[keyof typeof GoalType]

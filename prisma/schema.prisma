@@ -100,13 +100,27 @@ model HabitCompletion {
   @@index([date])
 }
 
+enum GoalType {
+  COUNT
+  SAVINGS
+  DISTANCE
+  DURATION
+}
+
 model Goal {
   id          String   @id @default(cuid())
   userId      String
+
   title       String
   description String?
+
+  type        GoalType @default(COUNT)
+
   target      Int      @default(100)
   progress    Int      @default(0)
+
+  unit        String?
+
   deadline    DateTime?
   completed   Boolean  @default(false)
 

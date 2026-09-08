@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 
 import Sidebar from "@/components/sidebar";
 import MobileNav from "@/components/mobile-nav";
+import { LanguageProvider } from "@/components/language-provider";
 
 export default function Providers({
   children,
@@ -13,23 +14,26 @@ export default function Providers({
 }) {
   const pathname = usePathname();
 
-  const isLoginPage = pathname === "/login";
+  const isPublicPage =
+    pathname === "/" || pathname === "/login";
 
   return (
     <SessionProvider>
-      {isLoginPage ? (
-        children
-      ) : (
-        <div className="min-h-screen bg-[#fafafa]">
-          <Sidebar />
+      <LanguageProvider>
+        {isPublicPage ? (
+          children
+        ) : (
+          <div className="min-h-screen bg-[#fafafa]">
+            <Sidebar />
 
-          <main className="min-h-screen transition-[padding] duration-300 ease-in-out lg:pl-[var(--sidebar-width,260px)]">
-            {children}
-          </main>
+            <main className="min-h-screen transition-[padding] duration-300 ease-in-out lg:pl-[var(--sidebar-width,260px)]">
+              {children}
+            </main>
 
-          <MobileNav />
-        </div>
-      )}
+            <MobileNav />
+          </div>
+        )}
+      </LanguageProvider>
     </SessionProvider>
   );
 }

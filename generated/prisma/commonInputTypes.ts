@@ -175,6 +175,13 @@ export type BoolWithAggregatesFilter<$PrismaModel = never> = {
   _max?: Prisma.NestedBoolFilter<$PrismaModel>
 }
 
+export type EnumGoalTypeFilter<$PrismaModel = never> = {
+  equals?: $Enums.GoalType | Prisma.EnumGoalTypeFieldRefInput<$PrismaModel>
+  in?: $Enums.GoalType[] | Prisma.ListEnumGoalTypeFieldRefInput<$PrismaModel>
+  notIn?: $Enums.GoalType[] | Prisma.ListEnumGoalTypeFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumGoalTypeFilter<$PrismaModel> | $Enums.GoalType
+}
+
 export type IntFilter<$PrismaModel = never> = {
   equals?: number | Prisma.IntFieldRefInput<$PrismaModel>
   in?: number[] | Prisma.ListIntFieldRefInput<$PrismaModel>
@@ -184,6 +191,16 @@ export type IntFilter<$PrismaModel = never> = {
   gt?: number | Prisma.IntFieldRefInput<$PrismaModel>
   gte?: number | Prisma.IntFieldRefInput<$PrismaModel>
   not?: Prisma.NestedIntFilter<$PrismaModel> | number
+}
+
+export type EnumGoalTypeWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.GoalType | Prisma.EnumGoalTypeFieldRefInput<$PrismaModel>
+  in?: $Enums.GoalType[] | Prisma.ListEnumGoalTypeFieldRefInput<$PrismaModel>
+  notIn?: $Enums.GoalType[] | Prisma.ListEnumGoalTypeFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumGoalTypeWithAggregatesFilter<$PrismaModel> | $Enums.GoalType
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumGoalTypeFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumGoalTypeFilter<$PrismaModel>
 }
 
 export type IntWithAggregatesFilter<$PrismaModel = never> = {
@@ -374,6 +391,23 @@ export type NestedBoolWithAggregatesFilter<$PrismaModel = never> = {
   _count?: Prisma.NestedIntFilter<$PrismaModel>
   _min?: Prisma.NestedBoolFilter<$PrismaModel>
   _max?: Prisma.NestedBoolFilter<$PrismaModel>
+}
+
+export type NestedEnumGoalTypeFilter<$PrismaModel = never> = {
+  equals?: $Enums.GoalType | Prisma.EnumGoalTypeFieldRefInput<$PrismaModel>
+  in?: $Enums.GoalType[] | Prisma.ListEnumGoalTypeFieldRefInput<$PrismaModel>
+  notIn?: $Enums.GoalType[] | Prisma.ListEnumGoalTypeFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumGoalTypeFilter<$PrismaModel> | $Enums.GoalType
+}
+
+export type NestedEnumGoalTypeWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.GoalType | Prisma.EnumGoalTypeFieldRefInput<$PrismaModel>
+  in?: $Enums.GoalType[] | Prisma.ListEnumGoalTypeFieldRefInput<$PrismaModel>
+  notIn?: $Enums.GoalType[] | Prisma.ListEnumGoalTypeFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumGoalTypeWithAggregatesFilter<$PrismaModel> | $Enums.GoalType
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumGoalTypeFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumGoalTypeFilter<$PrismaModel>
 }
 
 export type NestedIntWithAggregatesFilter<$PrismaModel = never> = {

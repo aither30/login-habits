@@ -1213,8 +1213,10 @@ export const GoalScalarFieldEnum = {
   userId: 'userId',
   title: 'title',
   description: 'description',
+  type: 'type',
   target: 'target',
   progress: 'progress',
+  unit: 'unit',
   deadline: 'deadline',
   completed: 'completed',
   createdAt: 'createdAt',
@@ -1325,6 +1327,20 @@ export type ListIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel,
  * Reference to a field of type 'Boolean'
  */
 export type BooleanFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Boolean'>
+    
+
+
+/**
+ * Reference to a field of type 'GoalType'
+ */
+export type EnumGoalTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'GoalType'>
+    
+
+
+/**
+ * Reference to a field of type 'GoalType[]'
+ */
+export type ListEnumGoalTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'GoalType[]'>
     
 
 

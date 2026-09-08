@@ -46,33 +46,26 @@ function getDayOffset(offset: number) {
   const date = new Date();
 
   date.setHours(0, 0, 0, 0);
-
-  date.setDate(
-    date.getDate() - offset
-  );
+  date.setDate(date.getDate() - offset);
 
   return getDateKey(date);
 }
 
-function calculateBestStreak(
-  habits: Habit[]
-) {
+function calculateBestStreak(habits: Habit[]) {
   const completedDates = new Set<string>();
 
   habits.forEach((habit) => {
-    (
-      habit.completions ?? []
-    ).forEach((completion) => {
-      if (!completion.completed) {
-        return;
-      }
+    (habit.completions ?? []).forEach(
+      (completion) => {
+        if (!completion.completed) return;
 
-      completedDates.add(
-        getDateKey(
-          new Date(completion.date)
-        )
-      );
-    });
+        completedDates.add(
+          getDateKey(
+            new Date(completion.date)
+          )
+        );
+      }
+    );
   });
 
   const sortedDates = Array.from(
@@ -89,19 +82,17 @@ function calculateBestStreak(
 
   let bestStreak = 0;
   let runningStreak = 0;
-  let previousDate: Date | null =
-    null;
+  let previousDate: Date | null = null;
 
   for (const date of sortedDates) {
     if (!previousDate) {
       runningStreak = 1;
     } else {
-      const difference =
-        Math.round(
-          (date.getTime() -
-            previousDate.getTime()) /
-            (1000 * 60 * 60 * 24)
-        );
+      const difference = Math.round(
+        (date.getTime() -
+          previousDate.getTime()) /
+          (1000 * 60 * 60 * 24)
+      );
 
       if (difference === 1) {
         runningStreak++;
@@ -122,239 +113,281 @@ function calculateBestStreak(
 }
 
 export default function StatisticsPage() {
-  const [habits, setHabits] =
-    useState<Habit[]>([]);
+  const [habits, setHabits] = useState<Habit[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const [loading, setLoading] =
-    useState(true);
-
-  useEffect(() => {
-    async function fetchHabits() {
-      try {
+  /*
+   * Fetch latest habits.
+   *
+   * showLoading hanya digunakan untuk
+   * initial request supaya refresh berikutnya
+   * tidak membuat UI berkedip.
+   */
+  async function fetchHabits(
+    showLoading = false
+  ) {
+    try {
+      if (showLoading) {
         setLoading(true);
+      }
 
-        const response = await fetch(
-          "/api/habits",
-          {
-            cache: "no-store",
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error(
-            "Failed to fetch habits"
-          );
+      const response = await fetch(
+        "/api/habits",
+        {
+          cache: "no-store",
+          headers: {
+            "Cache-Control": "no-cache",
+          },
         }
+      );
 
-        const data =
-          await response.json();
+      if (!response.ok) {
+        throw new Error(
+          "Failed to fetch habits"
+        );
+      }
 
-        setHabits(
-          Array.isArray(data)
-            ? data.map((habit) => ({
-                ...habit,
-                completions:
-                  habit.completions ??
-                  [],
-              }))
-            : []
-        );
-      } catch (error) {
-        console.error(
-          "Failed to fetch statistics:",
-          error
-        );
-      } finally {
+      const data = await response.json();
+
+      setHabits(
+        Array.isArray(data)
+          ? data.map((habit) => ({
+              ...habit,
+              completions:
+                habit.completions ?? [],
+            }))
+          : []
+      );
+    } catch (error) {
+      console.error(
+        "Failed to fetch statistics:",
+        error
+      );
+    } finally {
+      if (showLoading) {
         setLoading(false);
       }
     }
+  }
 
-    fetchHabits();
+  /*
+   * REALTIME SYNC
+   *
+   * 1. Initial fetch
+   * 2. Polling setiap 5 detik
+   * 3. Refresh saat tab aktif kembali
+   * 4. Refresh saat window mendapat focus
+   */
+  useEffect(() => {
+    let mounted = true;
+
+    async function refresh(
+      showLoading = false
+    ) {
+      if (!mounted) return;
+
+      await fetchHabits(showLoading);
+    }
+
+    // Initial load
+    refresh(true);
+
+    // Fallback polling
+    const interval = setInterval(() => {
+      refresh(false);
+    }, 5000);
+
+    // Browser tab kembali aktif
+    function handleVisibilityChange() {
+      if (
+        document.visibilityState ===
+        "visible"
+      ) {
+        refresh(false);
+      }
+    }
+
+    // Window kembali fokus
+    function handleFocus() {
+      refresh(false);
+    }
+
+    document.addEventListener(
+      "visibilitychange",
+      handleVisibilityChange
+    );
+
+    window.addEventListener(
+      "focus",
+      handleFocus
+    );
+
+    return () => {
+      mounted = false;
+
+      clearInterval(interval);
+
+      document.removeEventListener(
+        "visibilitychange",
+        handleVisibilityChange
+      );
+
+      window.removeEventListener(
+        "focus",
+        handleFocus
+      );
+    };
   }, []);
 
-  const totalHabits =
-    habits.length;
+  /*
+   * TOTAL HABITS
+   */
+  const totalHabits = habits.length;
 
   /*
    * TOTAL COMPLETIONS
-   * -----------------
+   *
    * Semua completion yang
    * pernah dilakukan.
    */
-  const totalCompleted =
-    useMemo(() => {
-      return habits.reduce(
-        (total, habit) =>
-          total +
-          (
-            habit.completions ?? []
-          ).filter(
-            (completion) =>
-              completion.completed
-          ).length,
-        0
-      );
-    }, [habits]);
+  const totalCompleted = useMemo(() => {
+    return habits.reduce(
+      (total, habit) =>
+        total +
+        (habit.completions ?? []).filter(
+          (completion) =>
+            completion.completed
+        ).length,
+      0
+    );
+  }, [habits]);
 
   /*
    * COMPLETION RATE
-   * ----------------
+   *
    * 7 hari terakhir.
    */
-  const completionRate =
-    useMemo(() => {
-      if (habits.length === 0) {
-        return 0;
-      }
+  const completionRate = useMemo(() => {
+    if (habits.length === 0) {
+      return 0;
+    }
 
-      const possible =
-        habits.length * 7;
+    const possible = habits.length * 7;
 
-      const validDates = new Set(
-        Array.from(
-          { length: 7 },
-          (_, index) =>
-            getDayOffset(index)
-        )
-      );
+    const validDates = new Set(
+      Array.from(
+        { length: 7 },
+        (_, index) =>
+          getDayOffset(index)
+      )
+    );
 
-      let completed = 0;
+    let completed = 0;
 
-      habits.forEach((habit) => {
-        (
-          habit.completions ?? []
-        ).forEach((completion) => {
-          if (
-            !completion.completed
-          ) {
+    habits.forEach((habit) => {
+      (habit.completions ?? []).forEach(
+        (completion) => {
+          if (!completion.completed) {
             return;
           }
 
-          const dateKey =
-            getDateKey(
-              new Date(
-                completion.date
-              )
-            );
+          const dateKey = getDateKey(
+            new Date(completion.date)
+          );
 
-          if (
-            validDates.has(
-              dateKey
-            )
-          ) {
+          if (validDates.has(dateKey)) {
             completed++;
           }
-        });
-      });
-
-      return Math.min(
-        100,
-        Math.round(
-          (completed / possible) *
-            100
-        )
+        }
       );
-    }, [habits]);
+    });
+
+    return Math.min(
+      100,
+      Math.round(
+        (completed / possible) * 100
+      )
+    );
+  }, [habits]);
 
   /*
    * BEST STREAK
    */
-  const bestStreak =
-    useMemo(
-      () =>
-        calculateBestStreak(
-          habits
-        ),
-      [habits]
-    );
+  const bestStreak = useMemo(
+    () => calculateBestStreak(habits),
+    [habits]
+  );
 
   /*
-   * PERFORMANCE PER HABIT
-   * ----------------------
-   * Dihitung berdasarkan
+   * HABIT PERFORMANCE
+   *
    * 7 hari terakhir.
    */
-  const habitPerformance =
-    useMemo(() => {
-      const validDates = new Set(
-        Array.from(
-          { length: 7 },
-          (_, index) =>
-            getDayOffset(index)
-        )
-      );
+  const habitPerformance = useMemo(() => {
+    const validDates = new Set(
+      Array.from(
+        { length: 7 },
+        (_, index) =>
+          getDayOffset(index)
+      )
+    );
 
-      return habits
-        .map((habit) => {
-          const completedDates =
-            new Set<string>();
+    return habits
+      .map((habit) => {
+        const completedDates =
+          new Set<string>();
 
-          (
-            habit.completions ?? []
-          ).forEach((completion) => {
-            if (
-              !completion.completed
-            ) {
+        (habit.completions ?? []).forEach(
+          (completion) => {
+            if (!completion.completed) {
               return;
             }
 
-            const dateKey =
-              getDateKey(
-                new Date(
-                  completion.date
-                )
-              );
-
-            if (
-              validDates.has(
-                dateKey
-              )
-            ) {
-              completedDates.add(
-                dateKey
-              );
-            }
-          });
-
-          const completedCount =
-            completedDates.size;
-
-          const percentage =
-            Math.min(
-              100,
-              Math.round(
-                (completedCount /
-                  7) *
-                  100
-              )
+            const dateKey = getDateKey(
+              new Date(completion.date)
             );
 
-          return {
-            ...habit,
-            completedCount,
-            percentage,
-          };
-        })
-        .sort(
-          (a, b) =>
-            b.percentage -
-            a.percentage
+            if (validDates.has(dateKey)) {
+              completedDates.add(dateKey);
+            }
+          }
         );
-    }, [habits]);
+
+        const completedCount =
+          completedDates.size;
+
+        const percentage = Math.min(
+          100,
+          Math.round(
+            (completedCount / 7) * 100
+          )
+        );
+
+        return {
+          ...habit,
+          completedCount,
+          percentage,
+        };
+      })
+      .sort(
+        (a, b) =>
+          b.percentage - a.percentage
+      );
+  }, [habits]);
 
   const today = getStartOfDay(
     new Date()
   );
 
-  const todayKey =
-    getDateKey(today);
+  const todayKey = getDateKey(today);
 
   return (
     <main className="min-h-screen bg-[#f7f7f5] text-gray-950">
       <section className="min-w-0 pb-24 lg:pb-0">
         <div className="mx-auto w-full max-w-[1500px] px-4 py-5 sm:px-6 sm:py-7 lg:px-10 lg:py-8">
-
-          {/* HEADER */}
+          {/* =========================
+              HEADER
+          ========================== */}
           <div>
             <p className="text-xs font-medium text-gray-400">
               Overview
@@ -370,9 +403,10 @@ export default function StatisticsPage() {
             </p>
           </div>
 
-          {/* STAT CARDS */}
+          {/* =========================
+              STAT CARDS
+          ========================== */}
           <div className="mt-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-
             {/* COMPLETION RATE */}
             <div className="rounded-3xl border border-gray-200 bg-white p-5 sm:p-6">
               <div className="flex items-center justify-between">
@@ -466,17 +500,15 @@ export default function StatisticsPage() {
             </div>
           </div>
 
-          {/* CHART + PERFORMANCE */}
+          {/* =========================
+              CHART + PERFORMANCE
+          ========================== */}
           <div className="mt-5 grid gap-5 lg:grid-cols-2">
-
             {/* WEEKLY CHART */}
-            <WeeklyChart
-              habits={habits}
-            />
+            <WeeklyChart habits={habits} />
 
             {/* HABIT PERFORMANCE */}
             <div className="rounded-3xl border border-gray-200 bg-white p-5 sm:p-6">
-
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="font-bold">
@@ -517,11 +549,7 @@ export default function StatisticsPage() {
                 <div className="mt-6 space-y-5">
                   {habitPerformance.map(
                     (habit) => (
-                      <div
-                        key={
-                          habit.id
-                        }
-                      >
+                      <div key={habit.id}>
                         <div className="flex items-center justify-between gap-3">
                           <div className="flex min-w-0 items-center gap-2">
                             <span className="text-base">
@@ -530,16 +558,12 @@ export default function StatisticsPage() {
                             </span>
 
                             <span className="truncate text-xs font-medium">
-                              {
-                                habit.name
-                              }
+                              {habit.name}
                             </span>
                           </div>
 
                           <span className="shrink-0 text-xs font-semibold">
-                            {
-                              habit.percentage
-                            }%
+                            {habit.percentage}%
                           </span>
                         </div>
 
@@ -553,9 +577,7 @@ export default function StatisticsPage() {
                         </div>
 
                         <p className="mt-1 text-[10px] text-gray-400">
-                          {
-                            habit.completedCount
-                          }{" "}
+                          {habit.completedCount}{" "}
                           of 7 days completed
                         </p>
                       </div>
@@ -566,7 +588,9 @@ export default function StatisticsPage() {
             </div>
           </div>
 
-          {/* WEEK SUMMARY */}
+          {/* =========================
+              WEEKLY SUMMARY
+          ========================== */}
           {!loading &&
             habits.length > 0 && (
               <div className="mt-5 rounded-3xl border border-gray-200 bg-white p-5 sm:p-6">
@@ -577,19 +601,16 @@ export default function StatisticsPage() {
                     </p>
 
                     <h2 className="mt-1 text-lg font-bold">
-                      {completionRate >=
-                      80
+                      {completionRate >= 80
                         ? "Excellent consistency! 🔥"
-                        : completionRate >=
-                            50
+                        : completionRate >= 50
                           ? "You're building momentum. 💪"
                           : "Keep showing up. 🚀"}
                     </h2>
 
                     <p className="mt-1 text-xs text-gray-400">
                       Your habits are
-                      {completionRate >=
-                      80
+                      {completionRate >= 80
                         ? " looking very consistent this week."
                         : " improving one day at a time."}
                     </p>
@@ -598,9 +619,7 @@ export default function StatisticsPage() {
                   <div className="flex items-center gap-8">
                     <div>
                       <p className="text-2xl font-bold">
-                        {
-                          completionRate
-                        }%
+                        {completionRate}%
                       </p>
 
                       <p className="mt-1 text-[10px] text-gray-400">
@@ -610,9 +629,7 @@ export default function StatisticsPage() {
 
                     <div>
                       <p className="text-2xl font-bold">
-                        {
-                          bestStreak
-                        }
+                        {bestStreak}
                       </p>
 
                       <p className="mt-1 text-[10px] text-gray-400">

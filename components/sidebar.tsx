@@ -66,15 +66,10 @@ export default function Sidebar() {
   const initial = name.charAt(0).toUpperCase();
 
   /*
-   * Read saved sidebar state after the component mounts.
-   *
-   * useLayoutEffect makes the state update happen before
-   * the browser paints the updated UI, preventing the
-   * visible "expanded → collapsed" animation.
+   * Restore saved sidebar state before the browser paints.
    */
   useLayoutEffect(() => {
-    const saved =
-      localStorage.getItem("habitflow-sidebar");
+    const saved = localStorage.getItem("habitflow-sidebar");
 
     if (saved === "collapsed") {
       setCollapsed(true);
@@ -84,15 +79,10 @@ export default function Sidebar() {
   }, []);
 
   /*
-   * Keep CSS variable + localStorage synchronized.
-   *
-   * Before hydration, don't save the default expanded
-   * state over the user's saved preference.
+   * Keep sidebar width and localStorage synchronized.
    */
   useEffect(() => {
-    if (!hydrated) {
-      return;
-    }
+    if (!hydrated) return;
 
     const width = collapsed ? "76px" : "260px";
 
@@ -121,24 +111,26 @@ export default function Sidebar() {
           LOGO
       ========================== */}
       <div
-        className={`px-4 pt-6 ${
+        className={`px-4 pt-6 transition-all duration-300 ${
           collapsed ? "flex justify-center" : ""
         }`}
       >
         <Link
-          href="/dashboard"
+          href="/"
           className={`flex items-center ${
             collapsed ? "justify-center" : "gap-3"
           }`}
         >
+          {/* LOGO ICON */}
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[13px] bg-black text-white shadow-sm">
             <CheckCircle2 size={21} />
           </div>
 
+          {/* LOGO TEXT */}
           <div
             className={`overflow-hidden whitespace-nowrap transition-all duration-200 ease-in-out ${
               collapsed
-                ? "w-0 translate-x-[-8px] opacity-0"
+                ? "w-0 -translate-x-2 opacity-0"
                 : "w-auto translate-x-0 opacity-100"
             }`}
           >
@@ -179,29 +171,109 @@ export default function Sidebar() {
       </button>
 
       {/* =========================
-          USER PROFILE
+          NAVIGATION
       ========================== */}
-      <div
-        className={`mt-7 transition-all duration-300 ${
+      <nav
+        className={`mt-7 flex-1 overflow-y-auto transition-all duration-300 ${
           collapsed ? "px-2" : "px-3"
         }`}
       >
+        {/* WORKSPACE LABEL */}
         <div
-          className={`flex items-center rounded-2xl bg-gray-50 transition-all duration-300 ${
+          className={`mb-3 overflow-hidden transition-all duration-200 ${
             collapsed
-              ? "justify-center p-2"
-              : "gap-2 p-2"
+              ? "h-0 opacity-0"
+              : "h-auto opacity-100"
           }`}
         >
+          <p className="px-3 text-[9px] font-bold uppercase tracking-[0.18em] text-gray-400">
+            Workspace
+          </p>
+        </div>
+
+        {/* MENU */}
+        <div className="space-y-1">
+          {menu.map((item) => {
+            const Icon = item.icon;
+
+            const active =
+              pathname === item.href ||
+              (item.href !== "/dashboard" &&
+                pathname.startsWith(item.href));
+
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                title={collapsed ? item.label : undefined}
+                className={`group flex items-center rounded-xl text-[13px] font-medium transition-all duration-300 ease-in-out ${
+                  collapsed
+                    ? "justify-center px-2 py-2.5"
+                    : "gap-3 px-3 py-2.5"
+                } ${
+                  active
+                    ? "bg-black text-white shadow-sm"
+                    : "text-gray-500 hover:bg-gray-100 hover:text-black"
+                }`}
+              >
+                {/* MENU ICON */}
+                <span
+                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-all duration-300 ${
+                    active
+                      ? "bg-white/10"
+                      : "bg-gray-50"
+                  }`}
+                >
+                  <Icon size={16} />
+                </span>
+
+                {/* MENU LABEL */}
+                <span
+                  className={`overflow-hidden whitespace-nowrap transition-all duration-200 ease-in-out ${
+                    collapsed
+                      ? "w-0 -translate-x-2 opacity-0"
+                      : "flex-1 translate-x-0 opacity-100"
+                  }`}
+                >
+                  {item.label}
+                </span>
+
+                {/* ACTIVE INDICATOR */}
+                {!collapsed && active && (
+                  <ChevronRight
+                    size={14}
+                    className="shrink-0 opacity-50"
+                  />
+                )}
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
+
+      {/* =========================
+          FOOTER
+      ========================== */}
+      <div className="border-t border-gray-100 px-3 py-3">
+        {/* USER PROFILE */}
+        <div
+          className={`flex h-[56px] items-center rounded-2xl bg-gray-50 p-2 transition-all duration-300 ease-in-out ${
+            collapsed
+              ? "justify-center"
+              : "gap-2"
+          }`}
+        >
+          {/* PROFILE LINK */}
           <Link
             href="/settings"
             title={collapsed ? name : undefined}
-            className={`flex min-w-0 items-center transition-all duration-300 ${
+            className={`flex min-w-0 items-center transition-all duration-300 ease-in-out ${
               collapsed
                 ? "justify-center"
                 : "flex-1 gap-3"
             }`}
           >
+            {/* AVATAR */}
             {image ? (
               <img
                 src={image}
@@ -214,10 +286,11 @@ export default function Sidebar() {
               </div>
             )}
 
+            {/* USER INFO */}
             <div
               className={`min-w-0 overflow-hidden whitespace-nowrap transition-all duration-200 ease-in-out ${
                 collapsed
-                  ? "w-0 translate-x-[-8px] opacity-0"
+                  ? "w-0 -translate-x-2 opacity-0"
                   : "flex-1 translate-x-0 opacity-100"
               }`}
             >
@@ -233,12 +306,13 @@ export default function Sidebar() {
 
           {/* SETTINGS + LOGOUT */}
           <div
-            className={`flex shrink-0 items-center gap-1 overflow-hidden transition-all duration-200 ${
+            className={`flex shrink-0 items-center gap-1 overflow-hidden transition-all duration-200 ease-in-out ${
               collapsed
                 ? "w-0 opacity-0"
                 : "w-auto opacity-100"
             }`}
           >
+            {/* SETTINGS */}
             <Link
               href="/settings"
               title="Settings"
@@ -252,6 +326,7 @@ export default function Sidebar() {
               <Settings size={15} />
             </Link>
 
+            {/* LOGOUT */}
             <button
               type="button"
               onClick={() =>
@@ -267,138 +342,19 @@ export default function Sidebar() {
             </button>
           </div>
         </div>
-      </div>
 
-      {/* =========================
-          NAVIGATION
-      ========================== */}
-      <nav
-        className={`mt-7 flex-1 overflow-y-auto transition-all duration-300 ${
-          collapsed ? "px-2" : "px-3"
-        }`}
-      >
+        {/* VERSION */}
         <div
-          className={`mb-3 overflow-hidden transition-all duration-200 ${
+          className={`overflow-hidden text-center transition-all duration-200 ease-in-out ${
             collapsed
-              ? "h-0 opacity-0"
-              : "h-auto opacity-100"
+              ? "mt-0 h-0 opacity-0"
+              : "mt-3 h-3 opacity-100"
           }`}
         >
-          <p className="px-3 text-[9px] font-bold uppercase tracking-[0.18em] text-gray-400">
-            Workspace
+          <p className="text-[9px] text-gray-300">
+            HabitFlow · v1.0
           </p>
         </div>
-
-        <div className="space-y-1">
-          {menu.map((item) => {
-            const Icon = item.icon;
-
-            const active =
-              pathname === item.href ||
-              (item.href !== "/dashboard" &&
-                pathname.startsWith(item.href));
-
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                title={
-                  collapsed
-                    ? item.label
-                    : undefined
-                }
-                className={`group flex items-center rounded-xl text-[13px] font-medium transition-all duration-300 ease-in-out ${
-                  collapsed
-                    ? "justify-center px-2 py-2.5"
-                    : "gap-3 px-3 py-2.5"
-                } ${
-                  active
-                    ? "bg-black text-white shadow-sm"
-                    : "text-gray-500 hover:bg-gray-100 hover:text-black"
-                }`}
-              >
-                <span
-                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-all duration-300 ${
-                    active
-                      ? "bg-white/10"
-                      : "bg-gray-50"
-                  }`}
-                >
-                  <Icon size={16} />
-                </span>
-
-                <span
-                  className={`overflow-hidden whitespace-nowrap transition-all duration-200 ease-in-out ${
-                    collapsed
-                      ? "w-0 translate-x-[-8px] opacity-0"
-                      : "flex-1 translate-x-0 opacity-100"
-                  }`}
-                >
-                  {item.label}
-                </span>
-
-                {!collapsed && active && (
-                  <ChevronRight
-                    size={14}
-                    className="shrink-0 opacity-50"
-                  />
-                )}
-              </Link>
-            );
-          })}
-        </div>
-
-        {/* =========================
-            CURRENT STREAK
-        ========================== */}
-        <div
-          className={`mt-8 overflow-hidden transition-all duration-300 ease-in-out ${
-            collapsed
-              ? "h-0 opacity-0"
-              : "h-auto opacity-100"
-          }`}
-        >
-          <div className="rounded-2xl bg-[#f4f4f0] p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[9px] font-bold uppercase tracking-widest text-gray-400">
-                  Current streak
-                </p>
-
-                <div className="mt-2 flex items-center gap-1.5">
-                  <Flame size={17} />
-
-                  <span className="text-lg font-bold">
-                    7 days
-                  </span>
-                </div>
-              </div>
-
-              <span className="text-lg">
-                🔥
-              </span>
-            </div>
-
-            <div className="mt-3 h-1.5 rounded-full bg-black/10">
-              <div className="h-full w-[70%] rounded-full bg-black" />
-            </div>
-          </div>
-        </div>
-      </nav>
-
-      {/* =========================
-          FOOTER
-      ========================== */}
-      <div
-        className={`overflow-hidden border-t border-gray-100 px-3 transition-all duration-200 ${
-          collapsed
-            ? "h-0 py-0 opacity-0"
-            : "h-auto py-3 opacity-100"
-        }`}
-      >
-        <p className="text-center text-[9px] text-gray-300">
-          HabitFlow · v1.0
-        </p>
       </div>
     </aside>
   );

@@ -61,41 +61,23 @@ const emojis = [
 export default function DashboardPage() {
   const router = useRouter();
 
-  const [habits, setHabits] =
-    useState<Habit[]>([]);
+  const [habits, setHabits] = useState<Habit[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const [loading, setLoading] =
-    useState(true);
-
-  const [showModal, setShowModal] =
-    useState(false);
-
+  const [showModal, setShowModal] = useState(false);
   const [modalMode, setModalMode] =
     useState<"create" | "edit">("create");
 
-  const [creating, setCreating] =
-    useState(false);
+  const [creating, setCreating] = useState(false);
+  const [editing, setEditing] = useState(false);
 
-  const [editing, setEditing] =
-    useState(false);
+  const [error, setError] = useState("");
 
-  const [error, setError] =
-    useState("");
-
-  const [name, setName] =
-    useState("");
-
-  const [description, setDescription] =
-    useState("");
-
-  const [emoji, setEmoji] =
-    useState("🎯");
-
-  const [time, setTime] =
-    useState("");
-
-  const [frequency, setFrequency] =
-    useState("daily");
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [emoji, setEmoji] = useState("🎯");
+  const [time, setTime] = useState("");
+  const [frequency, setFrequency] = useState("daily");
 
   const [editingHabit, setEditingHabit] =
     useState<EditingHabit | null>(null);
@@ -106,32 +88,29 @@ export default function DashboardPage() {
   const [deleteLoading, setDeleteLoading] =
     useState(false);
 
+  /* =====================================================
+     FETCH HABITS
+  ===================================================== */
+
   async function fetchHabits() {
     try {
       setLoading(true);
 
-      const response = await fetch(
-        "/api/habits",
-        {
-          cache: "no-store",
-        }
-      );
+      const response = await fetch("/api/habits", {
+        cache: "no-store",
+      });
 
       if (!response.ok) {
-        throw new Error(
-          "Failed to fetch habits"
-        );
+        throw new Error("Failed to fetch habits");
       }
 
-      const data =
-        await response.json();
+      const data = await response.json();
 
       setHabits(
         Array.isArray(data)
           ? data.map((habit) => ({
               ...habit,
-              completions:
-                habit.completions ?? [],
+              completions: habit.completions ?? [],
             }))
           : []
       );
@@ -149,17 +128,23 @@ export default function DashboardPage() {
     fetchHabits();
   }, []);
 
-  function openCreateModal() {
-    setModalMode("create");
-    setEditingHabit(null);
-    setError("");
+  /* =====================================================
+     FORM
+  ===================================================== */
 
+  function resetForm() {
     setName("");
     setDescription("");
     setEmoji("🎯");
     setTime("");
     setFrequency("daily");
+    setError("");
+  }
 
+  function openCreateModal() {
+    setModalMode("create");
+    setEditingHabit(null);
+    resetForm();
     setShowModal(true);
   }
 
@@ -183,21 +168,15 @@ export default function DashboardPage() {
       emoji: habit.emoji,
       time: habit.time,
       frequency:
-        originalHabit?.frequency ??
-        "daily",
+        originalHabit?.frequency ?? "daily",
     });
 
     setName(habit.name);
-    setDescription(
-      habit.description ?? ""
-    );
-    setEmoji(
-      habit.emoji ?? "🎯"
-    );
+    setDescription(habit.description ?? "");
+    setEmoji(habit.emoji ?? "🎯");
     setTime(habit.time ?? "");
     setFrequency(
-      originalHabit?.frequency ??
-        "daily"
+      originalHabit?.frequency ?? "daily"
     );
 
     setError("");
@@ -205,20 +184,20 @@ export default function DashboardPage() {
   }
 
   function closeModal() {
-    if (creating || editing) {
-      return;
-    }
+    if (creating || editing) return;
 
     setShowModal(false);
-    setError("");
     setEditingHabit(null);
+    setError("");
   }
+
+  /* =====================================================
+     CREATE
+  ===================================================== */
 
   async function createHabit() {
     if (!name.trim()) {
-      setError(
-        "Nama habit wajib diisi."
-      );
+      setError("Nama habit wajib diisi.");
       return;
     }
 
@@ -226,58 +205,40 @@ export default function DashboardPage() {
       setCreating(true);
       setError("");
 
-      const response = await fetch(
-        "/api/habits",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
-          body: JSON.stringify({
-            name: name.trim(),
-            description:
-              description.trim(),
-            emoji,
-            time: time || null,
-            frequency,
-          }),
-        }
-      );
+      const response = await fetch("/api/habits", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: name.trim(),
+          description: description.trim(),
+          emoji,
+          time: time || null,
+          frequency,
+        }),
+      });
 
-      const data =
-        await response.json();
+      const data = await response.json();
 
       if (!response.ok) {
         throw new Error(
-          data.error ||
-            "Failed to create habit"
+          data.error || "Failed to create habit"
         );
       }
 
-      const newHabit: Habit = {
-        ...data,
-        completions:
-          data.completions ?? [],
-      };
-
       setHabits((current) => [
         ...current,
-        newHabit,
+        {
+          ...data,
+          completions: data.completions ?? [],
+        },
       ]);
 
       setShowModal(false);
-
-      setName("");
-      setDescription("");
-      setEmoji("🎯");
-      setTime("");
-      setFrequency("daily");
+      resetForm();
     } catch (error) {
-      console.error(
-        "Failed to create habit:",
-        error
-      );
+      console.error(error);
 
       setError(
         error instanceof Error
@@ -289,15 +250,15 @@ export default function DashboardPage() {
     }
   }
 
+  /* =====================================================
+     UPDATE
+  ===================================================== */
+
   async function updateHabit() {
-    if (!editingHabit) {
-      return;
-    }
+    if (!editingHabit) return;
 
     if (!name.trim()) {
-      setError(
-        "Nama habit wajib diisi."
-      );
+      setError("Nama habit wajib diisi.");
       return;
     }
 
@@ -310,13 +271,11 @@ export default function DashboardPage() {
         {
           method: "PUT",
           headers: {
-            "Content-Type":
-              "application/json",
+            "Content-Type": "application/json",
           },
           body: JSON.stringify({
             name: name.trim(),
-            description:
-              description.trim(),
+            description: description.trim(),
             emoji,
             time: time || null,
             frequency,
@@ -324,24 +283,22 @@ export default function DashboardPage() {
         }
       );
 
-      const data =
-        await response.json();
+      const data = await response.json();
 
       if (!response.ok) {
         throw new Error(
-          data.error ||
-            "Failed to update habit"
+          data.error || "Failed to update habit"
         );
       }
 
       setHabits((current) =>
         current.map((habit) =>
-          habit.id ===
-          editingHabit.id
+          habit.id === editingHabit.id
             ? {
                 ...habit,
                 ...data,
                 completions:
+                  data.completions ??
                   habit.completions ??
                   [],
               }
@@ -351,11 +308,9 @@ export default function DashboardPage() {
 
       setShowModal(false);
       setEditingHabit(null);
+      resetForm();
     } catch (error) {
-      console.error(
-        "Failed to update habit:",
-        error
-      );
+      console.error(error);
 
       setError(
         error instanceof Error
@@ -367,14 +322,16 @@ export default function DashboardPage() {
     }
   }
 
+  /* =====================================================
+     DELETE
+  ===================================================== */
+
   function requestDelete(id: string) {
     setDeletingId(id);
   }
 
   async function deleteHabit() {
-    if (!deletingId) {
-      return;
-    }
+    if (!deletingId) return;
 
     try {
       setDeleteLoading(true);
@@ -386,29 +343,23 @@ export default function DashboardPage() {
         }
       );
 
-      const data =
-        await response.json();
+      const data = await response.json();
 
       if (!response.ok) {
         throw new Error(
-          data.error ||
-            "Failed to delete habit"
+          data.error || "Failed to delete habit"
         );
       }
 
       setHabits((current) =>
         current.filter(
-          (habit) =>
-            habit.id !== deletingId
+          (habit) => habit.id !== deletingId
         )
       );
 
       setDeletingId(null);
     } catch (error) {
-      console.error(
-        "Failed to delete habit:",
-        error
-      );
+      console.error(error);
 
       alert(
         error instanceof Error
@@ -419,6 +370,10 @@ export default function DashboardPage() {
       setDeleteLoading(false);
     }
   }
+
+  /* =====================================================
+     COMPLETION
+  ===================================================== */
 
   const completedCount = useMemo(() => {
     const today = new Date();
@@ -433,20 +388,16 @@ export default function DashboardPage() {
       (habit.completions ?? []).some(
         (completion) => {
           const completionDate =
-            new Date(
-              completion.date
-            );
+            new Date(completion.date);
 
-          const completionStart =
-            new Date(
-              completionDate.getFullYear(),
-              completionDate.getMonth(),
-              completionDate.getDate()
-            ).getTime();
+          const completionStart = new Date(
+            completionDate.getFullYear(),
+            completionDate.getMonth(),
+            completionDate.getDate()
+          ).getTime();
 
           return (
-            completionStart ===
-              todayStart &&
+            completionStart === todayStart &&
             completion.completed
           );
         }
@@ -457,9 +408,7 @@ export default function DashboardPage() {
   const completionPercentage =
     habits.length > 0
       ? Math.round(
-          (completedCount /
-            habits.length) *
-            100
+          (completedCount / habits.length) * 100
         )
       : 0;
 
@@ -481,39 +430,36 @@ export default function DashboardPage() {
           today.getDate()
         );
 
-        const existingCompletion =
-          (
-            habit.completions ?? []
-          ).find((completion) => {
-            const date =
-              new Date(
-                completion.date
-              );
+        const existingCompletion = (
+          habit.completions ?? []
+        ).find((completion) => {
+          const date = new Date(
+            completion.date
+          );
 
-            return (
-              date.getFullYear() ===
-                todayStart.getFullYear() &&
-              date.getMonth() ===
-                todayStart.getMonth() &&
-              date.getDate() ===
-                todayStart.getDate()
-            );
-          });
+          return (
+            date.getFullYear() ===
+              todayStart.getFullYear() &&
+            date.getMonth() ===
+              todayStart.getMonth() &&
+            date.getDate() ===
+              todayStart.getDate()
+          );
+        });
 
         if (existingCompletion) {
           return {
             ...habit,
             completions: (
               habit.completions ?? []
-            ).map(
-              (completion) =>
-                completion.id ===
-                existingCompletion.id
-                  ? {
-                      ...completion,
-                      completed,
-                    }
-                  : completion
+            ).map((completion) =>
+              completion.id ===
+              existingCompletion.id
+                ? {
+                    ...completion,
+                    completed,
+                  }
+                : completion
             ),
           };
         }
@@ -522,8 +468,7 @@ export default function DashboardPage() {
           return {
             ...habit,
             completions: [
-              ...(habit.completions ??
-                []),
+              ...(habit.completions ?? []),
               {
                 id: `temp-${Date.now()}`,
                 date:
@@ -538,6 +483,13 @@ export default function DashboardPage() {
       })
     );
   }
+
+  const displayedHabits = habits.slice(0, 6);
+  const hasMoreHabits = habits.length > 6;
+
+  /* =====================================================
+     RENDER
+  ===================================================== */
 
   return (
     <main className="min-h-screen bg-[#f7f7f5] text-gray-950">
@@ -566,8 +518,7 @@ export default function DashboardPage() {
               </h1>
 
               <p className="mt-2 text-sm text-gray-500">
-                Make today count. One habit
-                at a time.
+                Make today count. One habit at a time.
               </p>
             </div>
 
@@ -589,33 +540,28 @@ export default function DashboardPage() {
           <div className="mt-7 grid gap-4 lg:grid-cols-[0.8fr_1.2fr]">
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
               <ProgressCard
-                completed={
-                  completedCount
-                }
+                completed={completedCount}
                 total={habits.length}
               />
 
               <StreakCard
                 completions={habits.flatMap(
                   (habit) =>
-                    habit.completions ??
-                    []
+                    habit.completions ?? []
                 )}
               />
             </div>
 
-            <WeeklyChart
-              habits={habits}
-            />
+            <WeeklyChart habits={habits} />
           </div>
 
-          {/* HABITS */}
+          {/* TODAY'S HABITS */}
           <section className="mt-9">
             <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <div className="flex items-center gap-2">
                   <h2 className="text-xl font-bold tracking-tight sm:text-2xl">
-                    Today's Habits
+                    Today&apos;s Habits
                   </h2>
 
                   <span className="rounded-full bg-black px-2.5 py-1 text-[10px] font-bold text-white">
@@ -647,7 +593,7 @@ export default function DashboardPage() {
               </button>
             </div>
 
-            {/* COMPLETION BAR */}
+            {/* COMPLETION */}
             <div className="mb-5 rounded-2xl border border-gray-200 bg-white p-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -689,7 +635,7 @@ export default function DashboardPage() {
             {/* HABIT LIST */}
             {loading ? (
               <div className="grid gap-3 md:grid-cols-2">
-                {[1, 2, 3, 4].map(
+                {[1, 2, 3, 4, 5, 6].map(
                   (item) => (
                     <div
                       key={item}
@@ -715,68 +661,96 @@ export default function DashboardPage() {
 
                 <button
                   type="button"
-                  onClick={
-                    openCreateModal
-                  }
+                  onClick={openCreateModal}
                   className="mt-5 rounded-xl bg-black px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-gray-800"
                 >
                   Create your first habit
                 </button>
               </div>
             ) : (
-              <div className="grid gap-3 md:grid-cols-2">
-                {habits.map((habit) => {
-                  const today =
-                    new Date();
+              <>
+                <div className="grid gap-3 md:grid-cols-2">
+                  {displayedHabits.map(
+                    (habit) => {
+                      const today = new Date();
 
-                  const completedToday = (
-                    habit.completions ??
-                    []
-                  ).some(
-                    (completion) => {
-                      const date =
-                        new Date(
-                          completion.date
-                        );
+                      const completedToday = (
+                        habit.completions ?? []
+                      ).some(
+                        (completion) => {
+                          const date =
+                            new Date(
+                              completion.date
+                            );
+
+                          return (
+                            date.getFullYear() ===
+                              today.getFullYear() &&
+                            date.getMonth() ===
+                              today.getMonth() &&
+                            date.getDate() ===
+                              today.getDate() &&
+                            completion.completed
+                          );
+                        }
+                      );
 
                       return (
-                        date.getFullYear() ===
-                          today.getFullYear() &&
-                        date.getMonth() ===
-                          today.getMonth() &&
-                        date.getDate() ===
-                          today.getDate() &&
-                        completion.completed
+                        <HabitCard
+                          key={habit.id}
+                          id={habit.id}
+                          emoji={habit.emoji}
+                          title={habit.name}
+                          description={
+                            habit.description
+                          }
+                          time={habit.time}
+                          completed={
+                            completedToday
+                          }
+                          onCompletedChange={
+                            handleCompletedChange
+                          }
+                          onEdit={
+                            openEditModal
+                          }
+                          onDelete={
+                            requestDelete
+                          }
+                        />
                       );
                     }
-                  );
+                  )}
+                </div>
 
-                  return (
-                    <HabitCard
-                      key={habit.id}
-                      id={habit.id}
-                      emoji={habit.emoji}
-                      title={habit.name}
-                      description={
-                        habit.description
-                      }
-                      time={habit.time}
-                      completed={
-                        completedToday
-                      }
-                      onCompletedChange={
-                        handleCompletedChange
-                      }
-                      onEdit={
-                        openEditModal
-                      }
-                      onDelete={
-                        requestDelete
-                      }
-                    />
-                  );
-                })}
-              </div>
+                {/* VIEW ALL */}
+                {hasMoreHabits && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      router.push("/habits")
+                    }
+                    className="group mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border border-gray-200 bg-white px-4 py-3.5 text-xs font-semibold text-gray-500 transition hover:border-gray-300 hover:bg-gray-50 hover:text-black"
+                  >
+                    <span>
+                      Showing 6 of{" "}
+                      {habits.length} habits
+                    </span>
+
+                    <span className="text-gray-300">
+                      •
+                    </span>
+
+                    <span className="flex items-center gap-1">
+                      View all habits
+                      <ChevronRight
+                        size={14}
+                        className="transition-transform group-hover:translate-x-0.5"
+                      />
+                    </span>
+                  </button>
+                )}
+              </>
             )}
           </section>
 
@@ -790,29 +764,21 @@ export default function DashboardPage() {
               <p className="mt-1 text-xs text-gray-400">
                 {habits.length === 0
                   ? "Create your first habit to get started."
-                  : `You have ${
-                      habits.length -
+                  : remainingCountText(
+                      habits.length,
                       completedCount
-                    } habit${
-                      habits.length -
-                        completedCount !==
-                      1
-                        ? "s"
-                        : ""
-                    } left today.`}
+                    )}
               </p>
             </div>
 
             <button
               type="button"
               onClick={() =>
-                router.push(
-                  "/statistics"
-                )
+                router.push("/statistics")
               }
               className="group flex items-center gap-2 text-xs font-semibold text-gray-500 transition hover:text-black"
             >
-              See your streak
+              See your progress
 
               <ArrowUpRight
                 size={14}
@@ -823,59 +789,66 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      {/* CREATE / EDIT MODAL */}
+      {/* =================================================
+          CREATE / EDIT MODAL
+      ================================================= */}
+
       {showModal && (
         <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/45 p-3 backdrop-blur-sm sm:p-5"
           onMouseDown={(event) => {
             if (
               event.target ===
-              event.currentTarget
+                event.currentTarget &&
+              !creating &&
+              !editing
             ) {
               closeModal();
             }
           }}
         >
-          <div className="w-full max-w-2xl overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-2xl">
+          <div className="flex max-h-[calc(100vh-32px)] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl sm:max-h-[calc(100vh-48px)]">
 
             {/* HEADER */}
-            <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4 sm:px-6">
-              <div>
-                <h2 className="text-base font-bold tracking-tight sm:text-lg">
-                  {modalMode === "create"
-                    ? "Create new habit"
-                    : "Edit habit"}
-                </h2>
+            <div className="flex shrink-0 items-center justify-between border-b border-gray-100 px-5 py-4 sm:px-6">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-black text-lg">
+                  {emoji}
+                </div>
 
-                <p className="mt-0.5 text-[11px] text-gray-400 sm:text-xs">
-                  {modalMode === "create"
-                    ? "Build a routine that sticks."
-                    : "Update your habit details."}
-                </p>
+                <div>
+                  <p className="text-[9px] font-bold uppercase tracking-[0.15em] text-gray-400">
+                    HabitFlow
+                  </p>
+
+                  <h2 className="mt-0.5 text-sm font-bold tracking-tight sm:text-base">
+                    {modalMode === "create"
+                      ? "Create new habit"
+                      : "Edit habit"}
+                  </h2>
+                </div>
               </div>
 
               <button
                 type="button"
                 onClick={closeModal}
-                disabled={
-                  creating || editing
-                }
-                className="flex h-9 w-9 items-center justify-center rounded-xl text-gray-400 transition hover:bg-gray-100 hover:text-black disabled:opacity-50"
+                disabled={creating || editing}
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition hover:bg-gray-100 hover:text-black disabled:opacity-40"
               >
-                <X size={18} />
+                <X size={16} />
               </button>
             </div>
 
             {/* BODY */}
-            <div className="px-5 py-4 sm:px-6 sm:py-5">
-              <div className="grid gap-4 md:grid-cols-2">
+            <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6">
+              <div className="grid gap-6 md:grid-cols-[1.15fr_0.85fr]">
 
                 {/* LEFT */}
                 <div className="space-y-4">
 
                   {/* NAME */}
                   <div>
-                    <label className="mb-1.5 block text-xs font-semibold text-gray-700">
+                    <label className="mb-1.5 block text-[11px] font-semibold text-gray-700">
                       Habit name
                     </label>
 
@@ -902,16 +875,19 @@ export default function DashboardPage() {
                       }}
                       placeholder="e.g. Read 20 pages"
                       autoFocus
-                      className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm outline-none transition placeholder:text-gray-400 focus:border-black focus:bg-white"
+                      disabled={
+                        creating || editing
+                      }
+                      className="h-11 w-full rounded-xl border border-gray-200 bg-gray-50 px-3.5 text-xs outline-none transition placeholder:text-gray-400 focus:border-black focus:bg-white disabled:opacity-50"
                     />
                   </div>
 
                   {/* DESCRIPTION */}
                   <div>
-                    <label className="mb-1.5 block text-xs font-semibold text-gray-700">
+                    <label className="mb-1.5 block text-[11px] font-semibold text-gray-700">
                       Description
                       <span className="ml-1 font-normal text-gray-400">
-                        (optional)
+                        optional
                       </span>
                     </label>
 
@@ -923,17 +899,20 @@ export default function DashboardPage() {
                         )
                       }
                       placeholder="e.g. Read before sleeping"
-                      rows={2}
-                      className="w-full resize-none rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm outline-none transition placeholder:text-gray-400 focus:border-black focus:bg-white"
+                      rows={4}
+                      disabled={
+                        creating || editing
+                      }
+                      className="w-full resize-none rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-3 text-xs leading-5 outline-none transition placeholder:text-gray-400 focus:border-black focus:bg-white disabled:opacity-50"
                     />
                   </div>
 
                   {/* TIME */}
                   <div>
-                    <label className="mb-1.5 block text-xs font-semibold text-gray-700">
-                      Time
+                    <label className="mb-1.5 block text-[11px] font-semibold text-gray-700">
+                      Reminder time
                       <span className="ml-1 font-normal text-gray-400">
-                        (optional)
+                        optional
                       </span>
                     </label>
 
@@ -951,7 +930,10 @@ export default function DashboardPage() {
                             event.target.value
                           )
                         }
-                        className="w-full rounded-xl border border-gray-200 bg-gray-50 py-2.5 pl-9 pr-3 text-sm outline-none transition focus:border-black focus:bg-white"
+                        disabled={
+                          creating || editing
+                        }
+                        className="h-11 w-full rounded-xl border border-gray-200 bg-gray-50 py-2.5 pl-9 pr-3 text-xs outline-none transition focus:border-black focus:bg-white disabled:opacity-50"
                       />
                     </div>
                   </div>
@@ -960,54 +942,53 @@ export default function DashboardPage() {
                 {/* RIGHT */}
                 <div className="space-y-4">
 
-                  {/* ICON */}
+                  {/* EMOJI */}
                   <div>
-                    <label className="mb-1.5 block text-xs font-semibold text-gray-700">
-                      Icon
+                    <label className="mb-1.5 block text-[11px] font-semibold text-gray-700">
+                      Choose icon
                     </label>
 
                     <div className="grid grid-cols-6 gap-1.5">
-                      {emojis.map(
-                        (item) => (
-                          <button
-                            key={item}
-                            type="button"
-                            onClick={() =>
-                              setEmoji(
-                                item
-                              )
-                            }
-                            className={`flex h-9 items-center justify-center rounded-lg border text-base transition ${
-                              emoji ===
-                              item
-                                ? "border-black bg-black"
-                                : "border-gray-200 bg-gray-50 hover:border-gray-400"
-                            }`}
-                          >
-                            {item}
-                          </button>
-                        )
-                      )}
+                      {emojis.map((item) => (
+                        <button
+                          key={item}
+                          type="button"
+                          onClick={() =>
+                            setEmoji(item)
+                          }
+                          disabled={
+                            creating ||
+                            editing
+                          }
+                          className={`flex h-10 items-center justify-center rounded-xl border text-base transition ${
+                            emoji === item
+                              ? "border-black bg-black"
+                              : "border-gray-200 bg-gray-50 hover:border-gray-400 hover:bg-white"
+                          } disabled:opacity-50`}
+                        >
+                          {item}
+                        </button>
+                      ))}
                     </div>
                   </div>
 
                   {/* FREQUENCY */}
                   <div>
-                    <label className="mb-1.5 block text-xs font-semibold text-gray-700">
+                    <label className="mb-1.5 block text-[11px] font-semibold text-gray-700">
                       Frequency
                     </label>
 
                     <select
-                      value={
-                        frequency
-                      }
+                      value={frequency}
                       onChange={(event) =>
                         setFrequency(
-                          event.target
-                            .value
+                          event.target.value
                         )
                       }
-                      className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm outline-none transition focus:border-black focus:bg-white"
+                      disabled={
+                        creating || editing
+                      }
+                      className="h-11 w-full rounded-xl border border-gray-200 bg-gray-50 px-3.5 text-xs outline-none transition focus:border-black focus:bg-white disabled:opacity-50"
                     >
                       <option value="daily">
                         Every day
@@ -1020,34 +1001,49 @@ export default function DashboardPage() {
                   </div>
 
                   {/* PREVIEW */}
-                  <div className="rounded-2xl border border-gray-200 bg-gray-50 p-3.5">
-                    <p className="text-[9px] font-semibold uppercase tracking-wider text-gray-400">
+                  <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                    <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-gray-400">
                       Preview
                     </p>
 
-                    <div className="mt-2.5 flex items-center gap-3">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-lg shadow-sm">
-                        {emoji ||
-                          "🎯"}
+                    <div className="mt-3 flex items-center gap-3">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white text-xl shadow-sm">
+                        {emoji}
                       </div>
 
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-gray-900">
+                        <p className="truncate text-xs font-bold">
                           {name.trim() ||
                             "Your habit"}
                         </p>
 
-                        <p className="mt-0.5 truncate text-[11px] text-gray-400">
+                        <p className="mt-0.5 truncate text-[10px] text-gray-400">
                           {description.trim() ||
-                            "Your habit description"}
+                            "No description"}
                         </p>
+
+                        <div className="mt-1.5 flex items-center gap-2 text-[9px] text-gray-400">
+                          <span>
+                            {frequency ===
+                            "daily"
+                              ? "Every day"
+                              : "Every week"}
+                          </span>
+
+                          {time && (
+                            <>
+                              <span>•</span>
+                              <span>{time}</span>
+                            </>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
 
                   {/* ERROR */}
                   {error && (
-                    <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-xs font-medium text-red-600">
+                    <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-[11px] font-medium leading-5 text-red-600">
                       {error}
                     </div>
                   )}
@@ -1056,14 +1052,14 @@ export default function DashboardPage() {
             </div>
 
             {/* FOOTER */}
-            <div className="flex gap-3 border-t border-gray-100 bg-gray-50 px-5 py-3.5 sm:px-6">
+            <div className="flex shrink-0 items-center justify-end gap-2 border-t border-gray-100 bg-gray-50/70 px-5 py-3 sm:px-6">
               <button
                 type="button"
                 onClick={closeModal}
                 disabled={
                   creating || editing
                 }
-                className="flex-1 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-xs font-semibold text-gray-600 transition hover:border-gray-300 hover:text-black disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-lg px-4 py-2.5 text-[11px] font-semibold text-gray-500 transition hover:bg-gray-100 hover:text-black disabled:opacity-40"
               >
                 Cancel
               </button>
@@ -1071,42 +1067,37 @@ export default function DashboardPage() {
               <button
                 type="button"
                 onClick={
-                  modalMode ===
-                  "create"
+                  modalMode === "create"
                     ? createHabit
                     : updateHabit
                 }
                 disabled={
-                  creating || editing
+                  creating ||
+                  editing ||
+                  !name.trim()
                 }
-                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-black px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-60"
+                className="flex min-w-[115px] items-center justify-center gap-1.5 rounded-lg bg-black px-4 py-2.5 text-[11px] font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-300"
               >
-                {creating ||
-                editing ? (
+                {creating || editing ? (
                   <>
                     <Loader2
-                      size={14}
+                      size={13}
                       className="animate-spin"
                     />
 
-                    {modalMode ===
-                    "create"
+                    {modalMode === "create"
                       ? "Creating..."
                       : "Saving..."}
                   </>
                 ) : (
                   <>
-                    {modalMode ===
-                    "create" ? (
-                      <Plus size={14} />
+                    {modalMode === "create" ? (
+                      <Plus size={13} />
                     ) : (
-                      <Check
-                        size={14}
-                      />
+                      <Check size={13} />
                     )}
 
-                    {modalMode ===
-                    "create"
+                    {modalMode === "create"
                       ? "Create Habit"
                       : "Save Changes"}
                   </>
@@ -1117,35 +1108,37 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* DELETE CONFIRMATION */}
+      {/* =================================================
+          DELETE MODAL
+      ================================================= */}
+
       {deletingId && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-sm rounded-3xl border border-gray-200 bg-white p-6 shadow-2xl">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-50 text-red-500">
-              <Trash2 size={21} />
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-sm overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
+            <div className="px-5 pt-5">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-50 text-red-500">
+                <Trash2 size={17} />
+              </div>
+
+              <h2 className="mt-4 text-sm font-bold">
+                Delete this habit?
+              </h2>
+
+              <p className="mt-1.5 text-xs leading-5 text-gray-500">
+                This will permanently remove the
+                habit and its completion history.
+                This action cannot be undone.
+              </p>
             </div>
 
-            <h2 className="mt-5 text-lg font-bold">
-              Delete habit?
-            </h2>
-
-            <p className="mt-2 text-sm leading-6 text-gray-500">
-              This will permanently delete
-              this habit and its completion
-              history. This action cannot be
-              undone.
-            </p>
-
-            <div className="mt-6 flex gap-3">
+            <div className="mt-5 flex gap-2 border-t border-gray-100 bg-gray-50/70 px-5 py-3">
               <button
                 type="button"
                 onClick={() =>
                   setDeletingId(null)
                 }
-                disabled={
-                  deleteLoading
-                }
-                className="flex-1 rounded-xl border border-gray-200 bg-white px-4 py-3 text-xs font-semibold text-gray-600 transition hover:border-gray-300 hover:text-black disabled:opacity-50"
+                disabled={deleteLoading}
+                className="flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-[11px] font-semibold text-gray-600 transition hover:text-black disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -1153,23 +1146,20 @@ export default function DashboardPage() {
               <button
                 type="button"
                 onClick={deleteHabit}
-                disabled={
-                  deleteLoading
-                }
-                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-red-500 px-4 py-3 text-xs font-semibold text-white transition hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={deleteLoading}
+                className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-red-500 px-3 py-2.5 text-[11px] font-semibold text-white transition hover:bg-red-600 disabled:opacity-60"
               >
                 {deleteLoading ? (
                   <>
                     <Loader2
-                      size={14}
+                      size={13}
                       className="animate-spin"
                     />
-
                     Deleting...
                   </>
                 ) : (
                   <>
-                    <Trash2 size={14} />
+                    <Trash2 size={13} />
                     Delete
                   </>
                 )}
@@ -1180,4 +1170,26 @@ export default function DashboardPage() {
       )}
     </main>
   );
+}
+
+/* =========================================================
+   HELPER
+========================================================= */
+
+function remainingCountText(
+  total: number,
+  completed: number
+) {
+  const remaining = Math.max(
+    0,
+    total - completed
+  );
+
+  if (remaining === 0) {
+    return "All habits completed today. Great work!";
+  }
+
+  return `You have ${remaining} habit${
+    remaining !== 1 ? "s" : ""
+  } left today.`;
 }
